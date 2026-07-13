@@ -1,112 +1,134 @@
 --[[
-    Proton Menu - Loader Principal
-    Conecta a UI com os Cheats
+    Proton Loader - Conecta UI + Core
     GitHub: DavizeraXxx/Proton-Loader
 ]]
 
--- ======================
--- CARREGAR MÓDULOS
--- ======================
-
--- Carregar UI (Repositório 1)
+-- Carregar UI e Core
 local UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/DavizeraXxx/Proton-Ui/main/Ui.lua"))()
-
--- Carregar Core (Repositório 2)
 local Core = loadstring(game:HttpGet("https://raw.githubusercontent.com/DavizeraXxx/Proton-Cheats/main/Core.lua"))()
 
--- ======================
--- CONECTAR UI COM CORE
--- ======================
+-- Conectar Core com UI
+Core.UI = UI
 
--- Conectar eventos da UI com as funções do Core
-UI.OnToggleChange = function(name, state)
-    print("[UI → Core] Toggle:", name, state)
+-- Criar UI
+UI:CreateUI()
+
+-- ======================
+-- PÁGINAS
+-- ======================
+local function BuildPages()
+    UI:ClearMainArea()
     
-    -- Atualizar opções no Core
-    Core.Options[name] = state
+    local page = UI.SelectedCategory or "Aimbot"
+    local y = 10
     
-    -- Executar ações específicas
-    if name == "Noclip" then
-        Core:UpdateNoclip()
-    elseif name == "ESPSheriff" or name == "ESPMurder" then
-        Core:UpdateESP()
-    elseif name == "Aimbot" then
-        Core:UpdateAimbotVisual()
-    elseif name == "ESPGun" then
-        Core:UpdateGunESP()
+    if page == "Aimbot" then
+        -- Botão Aimbot
+        local btn = UI:CreateButton("🎯 Aimbot: " .. (Core.Options.Aimbot and "ATIVADO" or "DESATIVADO"), y, function()
+            local state = Core:ToggleAimbot()
+            btn.Text = "🎯 Aimbot: " .. (state and "ATIVADO" or "DESATIVADO")
+        end)
+        y = y + 40
+        
+        -- FOV Label
+        local label = UI:CreateLabel("FOV: " .. Core.Options.AimbotFOV, y)
+        y = y + 25
+        
+        -- FOV - / +
+        local btnMinus = UI:CreateButton("-", y, function()
+            local val = Core:SetFOV(Core.Options.AimbotFOV - 10)
+            label.Text = "FOV: " .. val
+        end)
+        btnMinus.Size = UDim2.new(0, 30, 0, 25)
+        btnMinus.Position = UDim2.new(0, 10, 0, y)
+        
+        local btnPlus = UI:CreateButton("+", y, function()
+            local val = Core:SetFOV(Core.Options.AimbotFOV + 10)
+            label.Text = "FOV: " .. val
+        end)
+        btnPlus.Size = UDim2.new(0, 30, 0, 25)
+        btnPlus.Position = UDim2.new(0, 50, 0, y)
+        
+    elseif page == "ESP" then
+        -- ESP Sheriff
+        local btn1 = UI:CreateButton("👁️ ESP Sheriff: " .. (Core.Options.ESPSheriff and "ATIVADO" or "DESATIVADO"), y, function()
+            local state = Core:ToggleESP("Sheriff")
+            btn1.Text = "👁️ ESP Sheriff: " .. (state and "ATIVADO" or "DESATIVADO")
+        end)
+        y = y + 40
+        
+        -- ESP Murder
+        local btn2 = UI:CreateButton("👁️ ESP Murder: " .. (Core.Options.ESPMurder and "ATIVADO" or "DESATIVADO"), y, function()
+            local state = Core:ToggleESP("Murder")
+            btn2.Text = "👁️ ESP Murder: " .. (state and "ATIVADO" or "DESATIVADO")
+        end)
+        y = y + 40
+        
+        -- ESP Gun
+        local btn3 = UI:CreateButton("👁️ ESP Gun: " .. (Core.Options.ESPGun and "ATIVADO" or "DESATIVADO"), y, function()
+            local state = Core:ToggleESP("Gun")
+            btn3.Text = "👁️ ESP Gun: " .. (state and "ATIVADO" or "DESATIVADO")
+        end)
+        
+    elseif page == "Teleport" then
+        UI:CreateButton("🚀 Teleportar Arma do Sheriff", y, function()
+            Core:TeleportGun()
+        end)
+        
+    elseif page == "Logs" then
+        UI:CreateButton("📋 Copiar Log (Sheriff/Murder)", y, function()
+            Core:CopyLog()
+        end)
+        
+    elseif page == "Misc" then
+        local btn = UI:CreateButton("⚙️ Noclip: " .. (Core.Options.Noclip and "ATIVADO" or "DESATIVADO"), y, function()
+            local state = Core:ToggleNoclip()
+            btn.Text = "⚙️ Noclip: " .. (state and "ATIVADO" or "DESATIVADO")
+        end)
     end
 end
 
-UI.OnSliderChange = function(name, value)
-    print("[UI → Core] Slider:", name, value)
-    
-    if name == "AimbotFOV" then
-        Core.Options.AimbotFOV = value
-        Core:UpdateAimbotVisual()
-    end
+-- ======================
+-- EVENTOS DA UI
+-- ======================
+UI.OnCategorySwitch = function(name)
+    UI.SelectedCategory = name
+    UI:HighlightCategory(name)
+    BuildPages()
 end
 
-UI.OnButtonClick = function(name)
-    print("[UI → Core] Button:", name)
-    
-    if name == "TeleportSheriffGun" then
-        Core:TeleportSheriffGun()
-    elseif name == "CopyLog" then
-        Core:CopyLog()
-    end
-end
-
-UI.OnPlayerSelect = function(player)
-    print("[UI → Core] Player selecionado:", player.Name)
-    Core.Options.TargetPlayer = player
-end
-
--- ======================
--- INICIAR TUDO
--- ======================
-
--- Criar a interface
-UI:CreateGUI()
-UI:StartFooterUpdates()
-
--- Iniciar o Core (cheats)
-Core:Start()
-
--- Notificar que tudo está pronto
-UI:Notify("Proton Menu carregado com sucesso! 🚀", 3)
-
--- ======================
--- COMANDOS RÁPIDOS (OPCIONAL)
--- ======================
-
-local UserInputService = game:GetService("UserInputService")
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    -- Tecla RShift para abrir/fechar menu
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        UI.Open = not UI.Open
-        UI.GUI.MainFrame.Visible = UI.Open
-    end
-    
-    -- Tecla G para teleportar arma do Sheriff
-    if input.KeyCode == Enum.KeyCode.G then
-        Core:TeleportSheriffGun()
-    end
-    
-    -- Tecla L para copiar log
-    if input.KeyCode == Enum.KeyCode.L then
-        Core:CopyLog()
-    end
-end)
-
--- ======================
--- LIMPEZA AO SAIR (OPCIONAL)
--- ======================
-
-game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
+UI.OnClose = function()
     Core:Cleanup()
+    UI:Close()
+end
+
+-- ======================
+-- INICIAR
+-- ======================
+-- Selecionar categoria inicial
+UI.SelectedCategory = "Aimbot"
+UI:HighlightCategory("Aimbot")
+BuildPages()
+
+-- Notificar
+UI:Notify("✅ Proton Menu carregado!")
+print("[Proton] Menu carregado com sucesso!")
+
+-- Atualizar FPS
+local Stats = game:GetService("Stats")
+local last = tick()
+local frames = 0
+
+game:GetService("RunService").Heartbeat:Connect(function()
+    frames = frames + 1
+    local now = tick()
+    if now - last >= 1 then
+        if UI.GUI.FPSLabel then
+            UI.GUI.FPSLabel.Text = "FPS: " .. math.floor(frames / (now - last))
+        end
+        frames = 0
+        last = now
+    end
 end)
 
-print("[Proton Loader] Tudo pronto! ✅")
+return { UI = UI, Core = Core }
